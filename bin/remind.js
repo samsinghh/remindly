@@ -25,13 +25,14 @@ const WORKER_ENV = "REMINDLY_WORKER";
 const USAGE = `Usage: remind <duration> <message>
 
 Duration formats:
-  Ns   seconds   (e.g. 10s)
-  Nm   minutes   (e.g. 30m)
-  Nh   hours     (e.g. 2h)
+  Ns      seconds   (e.g. 10s, .5s)
+  Nm      minutes   (e.g. 30m, 1.5m)
+  Nh      hours     (e.g. 2h, 1.5h)
+  NhNmNs  combined  (e.g. 1h2m3s)
 
 Examples:
   remind 30m "clock out of lunch"
-  remind 10s "check oven"
+  remind 1h2m3s "check oven"
   remind 2h  "start homework"
 
 The reminder runs in the background, so you can close this terminal.
@@ -49,16 +50,26 @@ function printVersionAndExit() {
   process.exit(0);
 }
 
-// Parse a duration string like "30m" into milliseconds, or return null.
+// Parse a duration string like "30m", "1.5h", or "1h2m3s" into milliseconds.
 function parseDuration(input) {
-  const match = /^(\d+)(s|m|h)$/.exec(input);
-  if (!match) return null;
+  const segment = /(\d+(?:\.\d+)?|\.\d+)(s|m|h)/g;
+  let cursor = 0;
+  let total = 0;
+  let match;
 
-  const amount = parseInt(match[1], 10);
-  const unit = match[2];
-  if (amount <= 0) return null;
+  while ((match = segment.exec(input)) !== null) {
+    if (match.index !== cursor) return null;
 
-  return amount * UNIT_MS[unit];
+    const amount = parseFloat(match[1]);
+    const unit = match[2];
+
+    total += amount * UNIT_MS[unit];
+    cursor = segment.lastIndex;
+  }
+
+  if (cursor !== input.length || total <= 0) return null;
+
+  return total;
 }
 
 // Show a macOS notification. On other platforms, the log file is the record.

@@ -27,15 +27,18 @@ Duration formats:
 
 | Suffix | Meaning | Example |
 | ------ | ------- | ------- |
-| `s`    | seconds | `10s`   |
-| `m`    | minutes | `30m`   |
-| `h`    | hours   | `2h`    |
+| `s`    | seconds | `10s`, `.5s` |
+| `m`    | minutes | `30m`, `1.5m` |
+| `h`    | hours   | `2h`, `1.5h` |
+
+You can also combine units, like `1h2m3s`.
 
 ## Examples
 
 ```sh
 remind 30m "clock out of lunch"
-remind 10s "check oven"
+remind 1h2m3s "check oven"
+remind .5h "stretch"
 remind 2h  "start homework"
 ```
 
