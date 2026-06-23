@@ -1,0 +1,37 @@
+{
+  "name": "remindly",
+  "version": "1.0.0",
+  "description": "A tiny CLI that sets a one-off reminder and fires a desktop notification, even after you close the terminal.",
+  "bin": {
+    "remind": "bin/remind.js"
+  },
+  "files": [
+    "bin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "start": "node bin/remind.js"
+  },
+  "keywords": [
+    "cli",
+    "reminder",
+    "remind",
+    "notification",
+    "timer",
+    "alarm"
+  ],
+  "author": "Samyak Singh",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/samsinghh/remindly.git"
+  },
+  "bugs": {
+    "url": "https://github.com/samsinghh/remindly/issues"
+  },
+  "homepage": "https://github.com/samsinghh/remindly#readme",
+  "engines": {
+    "node": ">=14"
+  }
+}
