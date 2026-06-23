@@ -11,8 +11,6 @@ remind 30m "clock out of lunch"
 
 ## Install
 
-### From npm
-
 ```sh
 npm install -g remindly
 ```
