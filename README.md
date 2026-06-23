@@ -19,6 +19,8 @@ npm install -g remindly
 
 ```sh
 remind <duration> <message>
+remind -v
+remind --version
 ```
 
 Duration formats:

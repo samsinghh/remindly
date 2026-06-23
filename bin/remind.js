@@ -6,6 +6,7 @@ const { execFile, spawn } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const pkg = require("../package.json");
 
 // Map of duration suffixes to their length in milliseconds.
 const UNIT_MS = {
@@ -41,6 +42,11 @@ function printUsageAndExit(code) {
   const stream = code === 0 ? process.stdout : process.stderr;
   stream.write(USAGE + "\n");
   process.exit(code);
+}
+
+function printVersionAndExit() {
+  process.stdout.write(`${pkg.name} ${pkg.version}\n`);
+  process.exit(0);
 }
 
 // Parse a duration string like "30m" into milliseconds, or return null.
@@ -107,6 +113,10 @@ function main() {
 
   if (args.length === 0 || args[0] === "-h" || args[0] === "--help") {
     printUsageAndExit(args.length === 0 ? 1 : 0);
+  }
+
+  if (args[0] === "-v" || args[0] === "--version") {
+    printVersionAndExit();
   }
 
   const durationArg = args[0];
