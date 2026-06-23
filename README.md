@@ -1,6 +1,6 @@
 # remindly
 
-A tiny, no-frills command-line tool to set a one-off reminder. The reminder
+A tiny cli tool to set a one-off reminder mainly for macOS. The reminder
 runs in the **background**, so you can close your terminal. When the time is
 up, it shows a desktop notification (on macOS) and records the reminder in a
 log file.
@@ -11,27 +11,10 @@ remind 30m "clock out of lunch"
 
 ## Install
 
-### From npm (once published)
+### From npm
 
 ```sh
 npm install -g remindly
-```
-
-This makes the `remind` command available everywhere.
-
-### From GitHub (no npm account needed)
-
-```sh
-npm install -g github:samsinghh/remindly
-```
-
-### For local development
-
-From inside the project folder:
-
-```sh
-npm link      # adds the global `remind` command
-npm unlink -g remindly   # removes it again
 ```
 
 ## Usage
@@ -75,17 +58,6 @@ You can watch reminders as they fire with:
 ```sh
 tail -f ~/.remindly.log
 ```
-
-## How it works
-
-- Parses the duration with a simple regex (`/^(\d+)(s|m|h)$/`).
-- Joins everything after the duration into a single message.
-- Spawns a **detached** copy of itself (`detached: true`, `stdio: "ignore"`,
-  then `child.unref()`) so the timer outlives the terminal, and the original
-  command exits right away.
-- The background process waits with `setTimeout`.
-- On macOS, shows a notification via `osascript`.
-- Appends the fired reminder to `~/.remindly.log` on all platforms.
 
 ## Limitations
 
