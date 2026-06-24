@@ -72,16 +72,16 @@ function parseDuration(input) {
   return total;
 }
 
-// Show a macOS notification. On other platforms, the log file is the record.
 function showNotification(message) {
   if (process.platform !== "darwin") return;
 
   const safe = message.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-  const script = `display notification "${safe}" with title "remindly"`;
+
+  const script = `display dialog "${safe}" buttons {"OK"} default button "OK" with title "remindly"`;
 
   execFile("osascript", ["-e", script], (err) => {
     if (err) {
-      appendLog(`Could not show desktop notification: ${err.message}`);
+      appendLog(`Could not show popup: ${err.message}`);
     }
   });
 }
