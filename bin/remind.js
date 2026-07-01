@@ -22,6 +22,12 @@ const LOG_FILE = path.join(os.homedir(), ".remindly.log");
 // Set on the detached child so it knows to wait + fire instead of re-spawning.
 const WORKER_ENV = "REMINDLY_WORKER";
 
+// The longest a single timer hop is allowed to run before we re-check the wall
+// clock. setTimeout counts only awake time, so after the machine sleeps a plain
+// countdown drifts late by the whole sleep duration. Re-arming in short hops and
+// comparing against an absolute deadline bounds that drift to one hop.
+const MAX_SLEEP_MS = 15 * 1000;
+
 const USAGE = `Usage: remind <duration> <message>
 
 Duration formats:
@@ -96,14 +102,26 @@ function appendLog(line) {
   }
 }
 
-// The detached worker: wait, then deliver the reminder. stdout/stderr are
-// ignored once detached, so the log file and notification are the output.
+// The detached worker: wait until the absolute target time, then deliver the
+// reminder. We re-arm in short hops and compare against a wall-clock deadline
+// (Date.now() tracks real time, so it advances across system sleep) so sleeping
+// the machine can't push the reminder late. stdout/stderr are ignored once
+// detached, so the log file and notification are the output.
 function runWorker(durationArg, message, ms) {
-  setTimeout(() => {
-    appendLog(`REMINDER (${durationArg}): ${message}`);
-    showNotification(message);
-    process.exit(0);
-  }, ms);
+  const target = Date.now() + ms;
+
+  function tick() {
+    const remaining = target - Date.now();
+    if (remaining <= 0) {
+      appendLog(`REMINDER (${durationArg}): ${message}`);
+      showNotification(message);
+      process.exit(0);
+      return;
+    }
+    setTimeout(tick, Math.min(remaining, MAX_SLEEP_MS));
+  }
+
+  tick();
 }
 
 // The foreground process: validate, then spawn a detached copy of itself
