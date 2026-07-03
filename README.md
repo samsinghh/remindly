@@ -5,10 +5,6 @@ runs in the **background**, so you can close your terminal. When the time is
 up, it shows a desktop notification (on macOS) and records the reminder in a
 log file.
 
-```sh
-remind 30m "clock out of lunch"
-```
-
 ## Install
 
 ```sh
