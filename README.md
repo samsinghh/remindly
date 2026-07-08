@@ -38,37 +38,6 @@ remind .5h "stretch"
 remind 2h  "start homework"
 ```
 
-Setting one returns immediately:
-
-```txt
-Reminder set for 30m: clock out of lunch
-Running in the background — you can close this terminal.
-```
-
-When the timer fires you get a desktop notification (on macOS), and the
-reminder is appended to the log file at `~/.remindly.log`:
-
-```txt
-[2026-06-23T19:50:35.302Z] REMINDER (30m): clock out of lunch
-```
-
-You can watch reminders as they fire with:
-
-```sh
-tail -f ~/.remindly.log
-```
-
-## Limitations
-
-This is intentionally minimal:
-
-- The background process lives only as long as your **computer stays on** and
-  doesn't sleep through the whole interval. There's no persistence, so a
-  reboot before the timer fires loses the reminder.
-- No background daemon manager, no database.
-- No way to list or cancel pending reminders yet.
-- Desktop notifications are macOS-only; other platforms rely on the log file.
-
 ## License
 
 MIT
