@@ -292,7 +292,7 @@ function runCancel(args) {
     process.exit(1);
   }
 
-  if (target === "--all" || target === "all") {
+  if (["--all", "-all", "-a", "all"].includes(target)) {
     for (const record of pending) {
       cancelRecord(record);
     }
