@@ -1,6 +1,6 @@
 {
   "name": "remindly",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "A tiny CLI that sets a one-off reminder and fires a desktop notification, even after you close the terminal.",
   "bin": {
     "remind": "bin/remind.js"
