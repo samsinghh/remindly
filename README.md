@@ -15,6 +15,8 @@ npm install -g remindly
 
 ```sh
 remind <duration> <message>
+remind list
+remind cancel <number>
 remind -v
 remind --version
 ```
@@ -37,6 +39,21 @@ remind 1h2m3s "check oven"
 remind .5h "stretch"
 remind 2h  "start homework"
 ```
+
+## Managing reminders
+
+List what's pending, soonest first, then cancel by its number:
+
+```sh
+$ remind list
+  1   in 28m 41s   clock out
+  2   in 1h 5m     check oven
+
+$ remind cancel 2
+Cancelled: check oven
+```
+
+Use `remind cancel --all` to cancel everything.
 
 ## License
 
