@@ -52,10 +52,16 @@ Examples:
 The reminder runs in the background, so you can close this terminal.
 Fired reminders are also appended to ${LOG_FILE}`;
 
-function printUsageAndExit(code) {
-  const stream = code === 0 ? process.stdout : process.stderr;
-  stream.write(USAGE + "\n");
-  process.exit(code);
+function printUsageAndExit() {
+  process.stdout.write(USAGE + "\n");
+  process.exit(0);
+}
+
+function failAndExit(message) {
+  process.stderr.write(`${message}\n\n`);
+  process.stderr.write("To see a list of supported remind commands, run:\n");
+  process.stderr.write("  remind -h\n");
+  process.exit(1);
 }
 
 function printVersionAndExit() {
@@ -387,8 +393,7 @@ function parseCommand(args) {
 
     const clock = parseClockTime(timeArg);
     if (clock === null) {
-      process.stderr.write(`Invalid time: "${timeArg}"\n\n`);
-      printUsageAndExit(1);
+      failAndExit(`Invalid time: "${timeArg}"`);
     }
 
     spec = {
@@ -402,13 +407,11 @@ function parseCommand(args) {
     const intervalMs = parseDuration(intervalArg);
 
     if (intervalMs === null) {
-      process.stderr.write(`Invalid interval: "${intervalArg}"\n\n`);
-      printUsageAndExit(1);
+      failAndExit(`Invalid interval: "${intervalArg}"`);
     }
 
     if (intervalMs < MIN_INTERVAL_MS) {
-      process.stderr.write("Repeat interval must be at least 10s.\n\n");
-      printUsageAndExit(1);
+      failAndExit("Repeat interval must be at least 10s.");
     }
 
     spec = {
@@ -423,8 +426,7 @@ function parseCommand(args) {
     const ms = parseDuration(durationArg);
 
     if (ms === null) {
-      process.stderr.write(`Invalid duration: "${durationArg}"\n\n`);
-      printUsageAndExit(1);
+      failAndExit(`Invalid duration: "${durationArg}"`);
     }
 
     spec = {
@@ -436,8 +438,7 @@ function parseCommand(args) {
   }
 
   if (!spec.message) {
-    process.stderr.write("Missing reminder message.\n\n");
-    printUsageAndExit(1);
+    failAndExit("Missing reminder message.");
   }
 
   return spec;
@@ -446,8 +447,12 @@ function parseCommand(args) {
 function main() {
   const args = process.argv.slice(2);
 
-  if (args.length === 0 || args[0] === "-h" || args[0] === "--help") {
-    printUsageAndExit(args.length === 0 ? 1 : 0);
+  if (args.length === 0) {
+    failAndExit("Usage: remind <duration> <message>");
+  }
+
+  if (args[0] === "-h" || args[0] === "--help") {
+    printUsageAndExit();
   }
 
   if (args[0] === "-v" || args[0] === "--version") {
