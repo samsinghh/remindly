@@ -485,4 +485,15 @@ function main() {
   console.log("Running in the background — you can close this terminal.");
 }
 
-main();
+module.exports = {
+  parseDuration,
+  parseClockTime,
+  formatClockTime,
+  formatRemaining,
+  describeKind,
+  parseCommand,
+};
+
+if (require.main === module) {
+  main();
+}
