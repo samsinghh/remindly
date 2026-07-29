@@ -22,7 +22,11 @@ const WORKER_ENV = "REMINDLY_WORKER";
 
 const MAX_SLEEP_MS = 15 * 1000;
 
+const MIN_INTERVAL_MS = 10 * 1000;
+
 const USAGE = `Usage: remind <duration> <message>
+       remind at <time> <message>
+       remind every <interval> <message>
 
 Commands:
   remind list             list pending reminders, soonest first
@@ -35,10 +39,15 @@ Duration formats:
   Nh      hours     (e.g. 2h, 1.5h)
   NhNmNs  combined  (e.g. 1h2m3s)
 
+Time formats:
+  5pm, 5:30pm, 9am, 17:30 — the next time it comes around
+
 Examples:
   remind 30m "clock out of lunch"
   remind 1h2m3s "check oven"
   remind 2h  "start homework"
+  remind at 5pm "standup"
+  remind every 1h "stand up"
 
 The reminder runs in the background, so you can close this terminal.
 Fired reminders are also appended to ${LOG_FILE}`;
@@ -73,6 +82,40 @@ function parseDuration(input) {
   if (cursor !== input.length || total <= 0) return null;
 
   return total;
+}
+
+function parseClockTime(input) {
+  const match = /^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/i.exec(input.trim());
+  if (!match) return null;
+
+  let hour = Number(match[1]);
+  const minute = match[2] === undefined ? 0 : Number(match[2]);
+  const meridiem = match[3] ? match[3].toLowerCase() : null;
+
+  if (minute > 59) return null;
+
+  if (meridiem) {
+    if (hour < 1 || hour > 12) return null;
+    if (meridiem === "am") hour = hour === 12 ? 0 : hour;
+    else hour = hour === 12 ? 12 : hour + 12;
+  } else if (hour > 23) {
+    return null;
+  }
+
+  const target = new Date();
+  target.setHours(hour, minute, 0, 0);
+  if (target.getTime() <= Date.now()) {
+    target.setDate(target.getDate() + 1);
+  }
+
+  return { ms: target.getTime() - Date.now(), label: formatClockTime(target) };
+}
+
+function formatClockTime(date) {
+  const hour24 = date.getHours();
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return `${hour12}:${minute} ${hour24 < 12 ? "AM" : "PM"}`;
 }
 
 function showNotification(message) {
@@ -191,6 +234,13 @@ function formatRemaining(ms) {
   return `${seconds}s`;
 }
 
+function describeKind(record) {
+  const label = record.label || record.durationArg;
+  if (record.kind === "every") return `(every ${label})`;
+  if (record.kind === "at") return `(at ${label})`;
+  return "";
+}
+
 function runList() {
   const pending = listPending();
 
@@ -204,15 +254,19 @@ function runList() {
     number: `${index + 1}`,
     when: `in ${formatRemaining(record.target - now)}`,
     message: record.message,
+    note: describeKind(record),
   }));
 
   const numberWidth = Math.max(...rows.map((row) => row.number.length));
   const whenWidth = Math.max(...rows.map((row) => row.when.length));
+  const hasNotes = rows.some((row) => row.note);
+  const messageWidth = hasNotes
+    ? Math.max(...rows.map((row) => row.message.length))
+    : 0;
 
   for (const row of rows) {
-    console.log(
-      `  ${row.number.padStart(numberWidth)}   ${row.when.padEnd(whenWidth)}   ${row.message}`
-    );
+    const line = `  ${row.number.padStart(numberWidth)}   ${row.when.padEnd(whenWidth)}   ${row.message.padEnd(messageWidth)}`;
+    console.log(row.note ? `${line}   ${row.note}` : line.trimEnd());
   }
 }
 
@@ -257,16 +311,23 @@ function runCancel(args) {
   console.log(`Cancelled: ${record.message}`);
 }
 
-function runWorker(durationArg, message, ms) {
-  const target = Date.now() + ms;
+function runWorker(spec) {
+  let target = Date.now() + spec.ms;
 
-  writeState({
-    pid: process.pid,
-    durationArg,
-    message,
-    target,
-    createdAt: Date.now(),
-  });
+  function record() {
+    return {
+      pid: process.pid,
+      kind: spec.kind,
+      label: spec.label,
+      durationArg: spec.label,
+      intervalMs: spec.intervalMs,
+      message: spec.message,
+      target,
+      createdAt: Date.now(),
+    };
+  }
+
+  writeState(record());
 
   for (const signal of ["SIGTERM", "SIGINT"]) {
     process.on(signal, () => {
@@ -278,13 +339,25 @@ function runWorker(durationArg, message, ms) {
   function tick() {
     const remaining = target - Date.now();
     if (remaining <= 0) {
-      removeState(process.pid);
-      appendLog(`REMINDER (${durationArg}): ${message}`);
-      showNotification(message);
-      process.exit(0);
-      return;
+      if (spec.kind !== "every") {
+        removeState(process.pid);
+        appendLog(`REMINDER (${spec.label}): ${spec.message}`);
+        showNotification(spec.message);
+        process.exit(0);
+        return;
+      }
+
+      appendLog(`REMINDER (every ${spec.label}): ${spec.message}`);
+      showNotification(spec.message);
+
+      do {
+        target += spec.intervalMs;
+      } while (target <= Date.now());
+
+      writeState(record());
     }
-    setTimeout(tick, Math.min(remaining, MAX_SLEEP_MS));
+
+    setTimeout(tick, Math.min(Math.max(target - Date.now(), 0), MAX_SLEEP_MS));
   }
 
   tick();
@@ -298,6 +371,76 @@ function spawnBackground(args) {
   });
 
   child.unref();
+}
+
+function parseCommand(args) {
+  let spec;
+
+  if (args[0] === "at") {
+    let timeArg = args[1] || "";
+    let rest = args.slice(2);
+
+    if (/^(am|pm)$/i.test(rest[0] || "")) {
+      timeArg += rest[0];
+      rest = rest.slice(1);
+    }
+
+    const clock = parseClockTime(timeArg);
+    if (clock === null) {
+      process.stderr.write(`Invalid time: "${timeArg}"\n\n`);
+      printUsageAndExit(1);
+    }
+
+    spec = {
+      kind: "at",
+      label: clock.label,
+      ms: clock.ms,
+      message: rest.join(" ").trim(),
+    };
+  } else if (args[0] === "every") {
+    const intervalArg = args[1] || "";
+    const intervalMs = parseDuration(intervalArg);
+
+    if (intervalMs === null) {
+      process.stderr.write(`Invalid interval: "${intervalArg}"\n\n`);
+      printUsageAndExit(1);
+    }
+
+    if (intervalMs < MIN_INTERVAL_MS) {
+      process.stderr.write("Repeat interval must be at least 10s.\n\n");
+      printUsageAndExit(1);
+    }
+
+    spec = {
+      kind: "every",
+      label: intervalArg,
+      ms: intervalMs,
+      intervalMs,
+      message: args.slice(2).join(" ").trim(),
+    };
+  } else {
+    const durationArg = args[0];
+    const ms = parseDuration(durationArg);
+
+    if (ms === null) {
+      process.stderr.write(`Invalid duration: "${durationArg}"\n\n`);
+      printUsageAndExit(1);
+    }
+
+    spec = {
+      kind: "in",
+      label: durationArg,
+      ms,
+      message: args.slice(1).join(" ").trim(),
+    };
+  }
+
+  if (!spec.message) {
+    process.stderr.write("Missing reminder message.\n\n");
+    printUsageAndExit(1);
+  }
+
+  return spec;
 }
 
 function main() {
@@ -321,27 +464,19 @@ function main() {
     return;
   }
 
-  const durationArg = args[0];
-  const message = args.slice(1).join(" ").trim();
-
-  const ms = parseDuration(durationArg);
-  if (ms === null) {
-    process.stderr.write(`Invalid duration: "${durationArg}"\n\n`);
-    printUsageAndExit(1);
-  }
-
-  if (!message) {
-    process.stderr.write("Missing reminder message.\n\n");
-    printUsageAndExit(1);
-  }
+  const spec = parseCommand(args);
 
   if (process.env[WORKER_ENV] === "1") {
-    runWorker(durationArg, message, ms);
+    runWorker(spec);
     return;
   }
 
   spawnBackground(args);
-  console.log(`Reminder set for ${durationArg}: ${message}`);
+  if (spec.kind === "every") {
+    console.log(`Repeating reminder set (every ${spec.label}): ${spec.message}`);
+  } else {
+    console.log(`Reminder set for ${spec.label}: ${spec.message}`);
+  }
   console.log("Running in the background — you can close this terminal.");
 }
 

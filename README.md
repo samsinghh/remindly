@@ -15,6 +15,8 @@ npm install -g remindly
 
 ```sh
 remind <duration> <message>
+remind at <time> <message>
+remind every <interval> <message>
 remind list
 remind cancel <number>
 remind -v
@@ -31,6 +33,8 @@ Duration formats:
 
 You can also combine units, like `1h2m3s`.
 
+Or give a clock time instead - `5pm`, `5:30pm`, `9am`, `17:30`. 
+
 ## Examples
 
 ```sh
@@ -38,7 +42,21 @@ remind 30m "clock out of lunch"
 remind 1h2m3s "check oven"
 remind .5h "stretch"
 remind 2h  "start homework"
+remind at 5pm "standup"
+remind at 5:30pm "leave for the gym"
+remind every 1h "stand up"
 ```
+
+## Repeating reminders
+
+`remind every <interval> <message>`
+
+```sh
+$ remind every 1h "stand up"
+Repeating reminder set (every 1h): stand up
+```
+
+Repeating reminders live in a background process, so they don't survive a reboot.
 
 ## Managing reminders
 
