@@ -1,9 +1,9 @@
 # remindly
 
-A tiny cli tool to set a one-off reminder mainly for macOS. The reminder
-runs in the **background**, so you can close your terminal. When the time is
-up, it shows a desktop notification (on macOS) and records the reminder in a
-log file.
+A small cli tool for macOS to set a one-off or recurring reminder. When the time is
+up, it shows a desktop notification and records the reminder in a log file.
+
+<img width="3024" height="1380" alt="remindly2" src="https://github.com/user-attachments/assets/04758db7-9dcc-4835-9f6a-ec0e7aee7174" />
 
 ## Install
 
@@ -72,7 +72,3 @@ Cancelled: check oven
 ```
 
 Use `remind cancel --all` to cancel everything.
-
-## License
-
-MIT
